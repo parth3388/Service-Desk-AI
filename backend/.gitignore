@@ -1,0 +1,22 @@
+venv/
+.env
+
+__pycache__/
+*.pyc
+
+.idea/
+.vscode/
+
+node_modules/
+.next/
+
+uploads/
+reports/
+
+*.log
+.DS_Store
+
+# Runtime data: customer call recordings and generated reports must never be committed
+storage/
+.pytest_cache/
+.test_tmp/

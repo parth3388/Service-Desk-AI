@@ -1,0 +1,24 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi
+uvicorn[standard]
+python-dotenv
+sqlalchemy
+alembic
+psycopg2-binary
+
+passlib==1.7.4
+bcrypt==4.0.1
+
+python-jose[cryptography]
+groq
+
+torch==2.7.1+cpu
+openai-whisper
+
+ffmpeg-python
+reportlab
+python-multipart
+pydantic[email]
+email-validator
+uharfbuzz
