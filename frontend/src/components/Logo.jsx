@@ -23,10 +23,10 @@ export default function Logo({ height = 40, className = "" }) {
     return (
         <Link href="/" className={`flex items-center select-none ${className}`}>
             <Image
-                src="/Logo.png"
+                src="/final logo.jpeg"
                 alt="Shatarupax AI Labs"
-                width={200}
-                height={200}
+                width={766}
+                height={371}
                 priority
                 onError={() => setImgError(true)}
                 style={{ height, width: "auto" }}

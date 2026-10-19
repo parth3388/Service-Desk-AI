@@ -5,8 +5,21 @@ import {
     FiSearch,
     FiUsers,
     FiAward,
-    FiTrash2
+    FiTrash2,
+    FiFilter,
+    FiChevronLeft,
+    FiChevronRight
 } from "react-icons/fi";
+
+const PAGE_SIZE = 10;
+
+const RATING_OPTIONS = [
+    { value: "all", label: "All Employees" },
+    { value: "excellent", label: "Excellent", min: 90 },
+    { value: "good", label: "Good", min: 75 },
+    { value: "average", label: "Average", min: 60 },
+    { value: "needs-improvement", label: "Needs Improvement", min: 0 }
+];
 
 // Smoothly animates a number from its previous value to a new target
 // whenever `target` changes (e.g. as the search filter narrows results).
@@ -52,6 +65,14 @@ function useCountUp(target, duration = 500) {
 
 }
 
+const initialsOf = (name) =>
+    name
+        ?.split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase() || "?";
+
 export default function EmployeePerformanceTable({
 
     employees = [],
@@ -61,27 +82,12 @@ export default function EmployeePerformanceTable({
 }) {
 
     const [search, setSearch] = useState("");
+    const [rating, setRating] = useState("all");
+    const [page, setPage] = useState(1);
 
     // tracks which employee_id is currently being deleted, so we can
     // disable just that row's button and show a small loading state
     const [deletingId, setDeletingId] = useState(null);
-
-    const filteredEmployees = useMemo(() => {
-
-        return employees.filter((employee) =>
-
-            employee.employee_name
-                ?.toLowerCase()
-                .includes(
-                    search.toLowerCase()
-                )
-
-        );
-
-    }, [employees, search]);
-
-    const animatedCount = useCountUp(filteredEmployees.length);
-
 
     const getPerformanceBadge = (score) => {
 
@@ -126,6 +132,44 @@ export default function EmployeePerformanceTable({
 
     };
 
+    const filteredEmployees = useMemo(() => {
+
+        return employees
+            .filter((employee) =>
+                employee.employee_name
+                    ?.toLowerCase()
+                    .includes(
+                        search.toLowerCase()
+                    )
+            )
+            .filter((employee) => {
+                if (rating === "all") return true;
+                return getPerformanceBadge(employee.average_confidence_score).text ===
+                    RATING_OPTIONS.find((r) => r.value === rating)?.label;
+            });
+
+    }, [employees, search, rating]);
+
+    // Reset to page 1 whenever the filters change — adjusting state during
+    // render (React's documented pattern for this) instead of in an effect,
+    // since this is deriving state from a prop/filter change, not
+    // synchronizing with an external system.
+    const [prevFilters, setPrevFilters] = useState({ search, rating });
+    if (prevFilters.search !== search || prevFilters.rating !== rating) {
+        setPrevFilters({ search, rating });
+        setPage(1);
+    }
+
+    const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const pagedEmployees = filteredEmployees.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+    );
+
+    const animatedCount = useCountUp(filteredEmployees.length);
+
+
     const handleDeleteClick = async (employee) => {
 
         const confirmed = window.confirm(
@@ -155,7 +199,7 @@ export default function EmployeePerformanceTable({
 
     return (
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
 
             <style jsx>{`
                 @keyframes fadeInUp {
@@ -192,40 +236,28 @@ export default function EmployeePerformanceTable({
 
             {/* Header */}
 
-            <div className="border-b border-slate-200 p-6">
+            <div className="border-b border-slate-100 p-6">
 
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-
-                        <FiUsers className="text-blue-600" />
-
-                        Showing {filteredEmployees.length} of {employees.length} employees
-
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                            <FiUsers size={18} />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Employees</h2>
+                            <p className="text-sm text-slate-500">
+                                View detailed performance metrics for all employees
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-
-                        <div className="rounded-xl bg-blue-50 px-5 py-3 transition hover:bg-blue-100">
-
-                            <p className="text-sm text-slate-500">
-
-                                Total Employees
-
-                            </p>
-
-                            <h3 className="text-2xl font-bold tabular-nums text-blue-700">
-
-                                {animatedCount}
-
-                            </h3>
-
-                        </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 
                         <div className="relative">
 
                             <FiSearch
-                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors peer-focus:text-blue-600"
+                                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
                             />
 
                             <input
@@ -240,10 +272,25 @@ export default function EmployeePerformanceTable({
                                     setSearch(e.target.value)
                                 }
 
-                                className="peer w-72 rounded-xl border border-slate-300 py-2 pl-10 pr-4 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                                className="w-full rounded-xl border border-slate-200 py-2.5 pr-4 pl-10 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
 
                             />
 
+                        </div>
+
+                        <div className="relative">
+                            <FiFilter className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
+                            <select
+                                value={rating}
+                                onChange={(e) => setRating(e.target.value)}
+                                className="appearance-none rounded-xl border border-slate-200 py-2.5 pr-8 pl-9 text-sm font-medium text-slate-600 outline-none transition focus:border-blue-500"
+                            >
+                                {RATING_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                     </div>
@@ -259,47 +306,51 @@ export default function EmployeePerformanceTable({
 
                 <table className="min-w-full">
 
-                    <thead className="bg-slate-100">
+                    <thead className="bg-slate-50">
 
                         <tr>
 
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
+                                #
+                            </th>
+
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Employee
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Calls
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Confidence
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Customer
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Agent
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Rating
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Action
 
@@ -313,13 +364,13 @@ export default function EmployeePerformanceTable({
 
                         {
 
-                            filteredEmployees.length === 0 && (
+                            pagedEmployees.length === 0 && (
 
                                 <tr>
 
                                     <td
 
-                                        colSpan={7}
+                                        colSpan={8}
 
                                         className="py-16 text-center"
 
@@ -333,13 +384,13 @@ export default function EmployeePerformanceTable({
 
                                                 {employees.length === 0
                                                     ? "No employees yet."
-                                                    : "No employees match your search."}
+                                                    : "No employees match your filters."}
 
                                             </p>
 
                                             {employees.length > 0 && (
                                                 <p className="text-sm text-slate-400">
-                                                    Try a different name.
+                                                    Try a different name or rating filter.
                                                 </p>
                                             )}
 
@@ -355,7 +406,7 @@ export default function EmployeePerformanceTable({
 
                         {
 
-                            filteredEmployees.map((employee, index) => {
+                            pagedEmployees.map((employee, index) => {
 
                                 const badge = getPerformanceBadge(
 
@@ -364,6 +415,7 @@ export default function EmployeePerformanceTable({
                                 );
 
                                 const isDeleting = deletingId === employee.employee_id;
+                                const rowNumber = (currentPage - 1) * PAGE_SIZE + index + 1;
 
                                 return (
 
@@ -373,59 +425,62 @@ export default function EmployeePerformanceTable({
 
                                         style={{ animationDelay: `${index * 60}ms` }}
 
-                                        className="row-animate border-t border-slate-100 transition hover:bg-slate-50 hover:shadow-sm"
+                                        className="row-animate border-t border-slate-100 odd:bg-white even:bg-slate-50/60 transition hover:bg-blue-50/40"
 
                                     >
 
-                                        <td className="px-6 py-5">
+                                        <td className="px-4 py-5 text-sm font-semibold text-slate-400">
+                                            {rowNumber.toString().padStart(2, "0")}
+                                        </td>
 
-                                            <div>
+                                        <td className="px-4 py-5">
 
-                                                <p className="font-semibold text-slate-800">
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-xs font-bold text-white">
+                                                    {initialsOf(employee.employee_name)}
+                                                </span>
+                                                <div>
+                                                    <p className="font-semibold text-slate-800">
 
-                                                    {employee.employee_name}
+                                                        {employee.employee_name}
 
-                                                </p>
+                                                    </p>
 
-                                                <p className="text-sm text-slate-500">
+                                                    <p className="text-sm text-slate-500">
 
-                                                    Employee ID :
+                                                        Employee ID: {employee.employee_id}
 
-                                                    {" "}
-
-                                                    {employee.employee_id}
-
-                                                </p>
-
+                                                    </p>
+                                                </div>
                                             </div>
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center font-semibold">
+                                        <td className="px-4 py-5 text-center font-semibold">
 
                                             {employee.total_calls}
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center font-bold text-green-600">
+                                        <td className="px-4 py-5 text-center font-bold text-green-600">
 
                                             {employee.average_confidence_score}
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center font-medium text-blue-600">
+                                        <td className="px-4 py-5 text-center font-medium text-blue-600">
 
                                             {employee.average_customer_score}
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center font-medium text-purple-600">
+                                        <td className="px-4 py-5 text-center font-medium text-purple-600">
 
                                             {employee.average_agent_score}
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center">
+                                        <td className="px-4 py-5 text-center">
 
                                             <span
 
@@ -441,7 +496,7 @@ export default function EmployeePerformanceTable({
 
                                         </td>
 
-                                        <td className="px-6 py-5 text-center">
+                                        <td className="px-4 py-5 text-center">
 
                                             <button
 
@@ -473,6 +528,36 @@ export default function EmployeePerformanceTable({
 
                 </table>
 
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 sm:flex-row">
+                <p className="text-sm text-slate-500">
+                    Showing {animatedCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}
+                    {"–"}
+                    {Math.min(currentPage * PAGE_SIZE, filteredEmployees.length)} of {filteredEmployees.length} employees
+                </p>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <FiChevronLeft size={16} />
+                    </button>
+                    <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-blue-600 px-2 text-sm font-semibold text-white">
+                        {currentPage}
+                    </span>
+                    <span className="text-sm text-slate-400">of {totalPages}</span>
+                    <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <FiChevronRight size={16} />
+                    </button>
+                </div>
             </div>
 
         </div>

@@ -5,38 +5,81 @@ import Link from "next/link";
 import {
     FiSearch,
     FiDownload,
-    FiFileText
+    FiFileText,
+    FiTrash2,
+    FiFilter,
+    FiChevronLeft,
+    FiChevronRight,
+    FiEye
 } from "react-icons/fi";
 
-import { downloadCompanyReport } from "../services/managerService";
-import { FiTrash2 } from "react-icons/fi";
-import { deleteCompanyReport } from "../services/managerService";
+import { downloadCompanyReport, deleteCompanyReport } from "../services/managerService";
+
+const PAGE_SIZE = 10;
+
+const STATUS_OPTIONS = [
+    { value: "all", label: "All Statuses" },
+    { value: "COMPLETED", label: "Completed" },
+    { value: "FAILED", label: "Failed" },
+    { value: "IN_PROGRESS", label: "In Progress" }
+];
+
+const IN_PROGRESS_STATUSES = ["UPLOADING", "TRANSCRIBING", "AI_ANALYZING", "GENERATING_REPORT"];
+
+const formatDuration = (seconds) => {
+    if (!seconds && seconds !== 0) return "—";
+    const total = Math.round(seconds);
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 export default function CompanyReportsTable({
 
-    reports = []
+    reports = [],
+
+    onRefresh
 
 }) {
 
     const [search, setSearch] = useState("");
+    const [status, setStatus] = useState("all");
+    const [page, setPage] = useState(1);
+    const [deletingId, setDeletingId] = useState(null);
 
     const filteredReports = useMemo(() => {
 
-        return reports.filter((report) =>
+        return reports
+            .filter((report) =>
+                report.original_filename
+                    ?.toLowerCase()
+                    .includes(search.toLowerCase())
+                ||
+                String(report.employee_id)
+                    .includes(search)
+            )
+            .filter((report) => {
+                if (status === "all") return true;
+                if (status === "IN_PROGRESS") return IN_PROGRESS_STATUSES.includes(report.processing_status);
+                return report.processing_status === status;
+            });
 
-            report.original_filename
-                ?.toLowerCase()
-                .includes(search.toLowerCase())
+    }, [reports, search, status]);
 
-            ||
+    // Reset to page 1 whenever the filters change — adjusting state during
+    // render (React's documented pattern for this) instead of in an effect.
+    const [prevFilters, setPrevFilters] = useState({ search, status });
+    if (prevFilters.search !== search || prevFilters.status !== status) {
+        setPrevFilters({ search, status });
+        setPage(1);
+    }
 
-            String(report.employee_id)
-                .includes(search)
-
-        );
-
-    }, [reports, search]);
-
-
+    const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const pagedReports = filteredReports.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+    );
 
     const downloadPdf = async (reportId) => {
 
@@ -81,6 +124,7 @@ export default function CompanyReportsTable({
         }
 
     };
+
     const handleDelete = async (reportId) => {
 
         const confirmed = window.confirm(
@@ -91,11 +135,13 @@ export default function CompanyReportsTable({
 
         try {
 
+            setDeletingId(reportId);
+
             await deleteCompanyReport(reportId);
 
-            alert("Report deleted successfully.");
-
-            window.location.reload();
+            if (onRefresh) {
+                await onRefresh();
+            }
 
         }
 
@@ -110,12 +156,18 @@ export default function CompanyReportsTable({
 
         }
 
+        finally {
+
+            setDeletingId(null);
+
+        }
+
     };
 
 
-    const getStatusStyle = (status) => {
+    const getStatusStyle = (statusValue) => {
 
-        switch (status) {
+        switch (statusValue) {
 
             case "COMPLETED":
 
@@ -133,7 +185,7 @@ export default function CompanyReportsTable({
 
             case "GENERATING_REPORT":
 
-                return "bg-yellow-100 text-yellow-700";
+                return "bg-amber-100 text-amber-700";
 
             default:
 
@@ -147,53 +199,68 @@ export default function CompanyReportsTable({
 
     return (
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
 
             {/* Header */}
 
-            <div className="border-b border-slate-200 p-6">
+            <div className="border-b border-slate-100 p-6">
 
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-                    <div>
-
-                        <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
-
-                            <FiFileText />
-
-                            Company Reports
-
-                        </h2>
-
-                        <p className="mt-2 text-slate-500">
-
-                            View all reports generated by employees.
-
-                        </p>
-
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                            <FiFileText size={18} />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">
+                                All Reports
+                            </h2>
+                            <p className="text-sm text-slate-500">
+                                View all reports generated by employees
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="relative">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 
-                        <FiSearch
-                            className="absolute left-3 top-3 text-slate-400"
-                        />
+                        <div className="relative">
 
-                        <input
+                            <FiSearch
+                                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+                            />
 
-                            type="text"
+                            <input
 
-                            value={search}
+                                type="text"
 
-                            onChange={(e) =>
-                                setSearch(e.target.value)
-                            }
+                                value={search}
 
-                            placeholder="Search filename or Employee ID..."
+                                onChange={(e) =>
+                                    setSearch(e.target.value)
+                                }
 
-                            className="w-80 rounded-xl border border-slate-300 py-2 pl-10 pr-4 outline-none transition focus:border-blue-600"
+                                placeholder="Search filename or Employee ID..."
 
-                        />
+                                className="w-full rounded-xl border border-slate-200 py-2.5 pr-4 pl-10 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-72"
+
+                            />
+
+                        </div>
+
+                        <div className="relative">
+                            <FiFilter className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
+                            <select
+                                value={status}
+                                onChange={(e) => setStatus(e.target.value)}
+                                className="appearance-none rounded-xl border border-slate-200 py-2.5 pr-8 pl-9 text-sm font-medium text-slate-600 outline-none transition focus:border-blue-500"
+                            >
+                                {STATUS_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                     </div>
 
@@ -209,59 +276,63 @@ export default function CompanyReportsTable({
 
                 <table className="min-w-full">
 
-                    <thead className="bg-slate-100">
+                    <thead className="bg-slate-50">
 
                         <tr>
 
-                            <th className="px-6 py-4 text-left text-sm font-semibold">
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
+                                #
+                            </th>
 
-                                Employee ID
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
+
+                                Employee
 
                             </th>
 
-                            <th className="px-6 py-4 text-left text-sm font-semibold">
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Audio File
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Confidence
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Customer
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Agent
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Duration
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Status
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Uploaded
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Action
 
@@ -275,13 +346,13 @@ export default function CompanyReportsTable({
 
                         {
 
-                            filteredReports.length === 0 && (
+                            pagedReports.length === 0 && (
 
                                 <tr>
 
                                     <td
 
-                                        colSpan={9}
+                                        colSpan={10}
 
                                         className="py-16 text-center text-slate-500"
 
@@ -299,140 +370,141 @@ export default function CompanyReportsTable({
 
                         {
 
-                            filteredReports.map((report) => (
+                            pagedReports.map((report, index) => {
+                                const rowNumber = (currentPage - 1) * PAGE_SIZE + index + 1;
+                                const failed = report.processing_status === "FAILED";
+                                const isDeleting = deletingId === report.report_id;
 
-                                <tr
+                                return (
 
-                                    key={report.report_id}
+                                    <tr
 
-                                    className="border-t border-slate-100 transition hover:bg-slate-50"
+                                        key={report.report_id}
 
-                                >
+                                        className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60 transition hover:bg-blue-50/40"
 
-                                    <td className="px-6 py-5 font-semibold text-blue-700">
+                                    >
 
-                                        #{report.employee_id}
+                                        <td className="px-4 py-5 text-sm font-semibold text-slate-400">
+                                            {rowNumber}
+                                        </td>
 
-                                    </td>
+                                        <td className="px-4 py-5">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-700">
+                                                #{report.employee_id}
+                                            </span>
+                                        </td>
 
-                                    <td className="px-6 py-5">
+                                        <td className="px-4 py-5">
 
-                                        <div>
+                                            <div>
 
-                                            <p className="font-medium text-slate-800">
+                                                <p className="font-medium text-slate-800">
 
-                                                {report.original_filename}
+                                                    {report.original_filename}
 
-                                            </p>
+                                                </p>
 
-                                            <p className="text-xs text-slate-500">
+                                                <p className="text-xs text-slate-400">
 
-                                                Report ID :
+                                                    Report ID: {report.report_id}
 
-                                                {" "}
+                                                </p>
 
-                                                {report.report_id}
+                                            </div>
 
-                                            </p>
+                                        </td>
 
-                                        </div>
+                                        <td className={`px-4 py-5 text-center font-bold ${failed ? "text-slate-400" : "text-green-600"}`}>
 
-                                    </td>
+                                            {failed ? "—" : report.confidence_score}
 
-                                    <td className="px-6 py-5 text-center font-bold text-green-600">
+                                        </td>
 
-                                        {report.confidence_score}
+                                        <td className={`px-4 py-5 text-center font-medium ${failed ? "text-slate-400" : "text-blue-600"}`}>
 
-                                    </td>
+                                            {failed ? "—" : report.customer_score}
 
-                                    <td className="px-6 py-5 text-center text-blue-600">
+                                        </td>
 
-                                        {report.customer_score}
+                                        <td className={`px-4 py-5 text-center font-medium ${failed ? "text-slate-400" : "text-purple-600"}`}>
 
-                                    </td>
+                                            {failed ? "—" : report.agent_score}
 
-                                    <td className="px-6 py-5 text-center text-purple-600">
+                                        </td>
 
-                                        {report.agent_score}
+                                        <td className="px-4 py-5 text-center text-sm text-slate-500">
 
-                                    </td>
+                                            {formatDuration(report.call_duration)}
 
-                                    <td className="px-6 py-5 text-center">
+                                        </td>
 
-                                        {
+                                        <td className="px-4 py-5 text-center">
 
-                                            Number(
+                                            <span
 
-                                                report.call_duration || 0
+                                                className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusStyle(report.processing_status)}`}
 
-                                            ).toFixed(1)
-
-                                        }
-
-                                        s
-
-                                    </td>
-
-                                    <td className="px-6 py-5 text-center">
-
-                                        <span
-
-                                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(report.processing_status)}`}
-
-                                        >
-
-                                            {report.processing_status}
-
-                                        </span>
-
-                                    </td>
-
-                                    <td className="px-6 py-5 text-center text-sm text-slate-500">
-
-                                        {
-
-                                            new Date(
-
-                                                report.created_at
-
-                                            ).toLocaleDateString()
-
-                                        }
-
-                                    </td>
-
-                                    <td className="px-6 py-5">
-
-                                        <div className="flex justify-center gap-2">
-
-                                            <Link
-                                                href={`/manager/report/${report.report_id}`}
-                                                className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
                                             >
-                                                View
-                                            </Link>
 
-                                            <button
-                                                onClick={() =>
-                                                    downloadPdf(report.report_id)
-                                                }
-                                                className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700"
-                                            >
-                                                <FiDownload />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(report.report_id)}
-                                                className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
-                                            >
-                                                <FiTrash2 />
-                                            </button>
-                                        </div>
+                                                {report.processing_status}
 
-                                    </td>
+                                            </span>
 
-                                </tr>
+                                        </td>
 
-                            ))
+                                        <td className="px-4 py-5 text-center text-sm text-slate-500">
+
+                                            {
+
+                                                new Date(
+
+                                                    report.created_at
+
+                                                ).toLocaleDateString()
+
+                                            }
+
+                                        </td>
+
+                                        <td className="px-4 py-5">
+
+                                            <div className="flex justify-center gap-2">
+
+                                                <Link
+                                                    href={`/manager/report/${report.report_id}`}
+                                                    className="rounded-lg bg-blue-600 p-2 text-white transition hover:bg-blue-700"
+                                                    title="View Report"
+                                                >
+                                                    <FiEye size={15} />
+                                                </Link>
+
+                                                <button
+                                                    onClick={() =>
+                                                        downloadPdf(report.report_id)
+                                                    }
+                                                    disabled={report.processing_status !== "COMPLETED"}
+                                                    className="rounded-lg bg-green-600 p-2 text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                                                    title="Download PDF"
+                                                >
+                                                    <FiDownload size={15} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(report.report_id)}
+                                                    disabled={isDeleting}
+                                                    className="rounded-lg bg-red-600 p-2 text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    title="Delete Report"
+                                                >
+                                                    <FiTrash2 size={15} />
+                                                </button>
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                );
+                            })
 
                         }
 
@@ -440,6 +512,36 @@ export default function CompanyReportsTable({
 
                 </table>
 
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 sm:flex-row">
+                <p className="text-sm text-slate-500">
+                    Showing {filteredReports.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}
+                    {"–"}
+                    {Math.min(currentPage * PAGE_SIZE, filteredReports.length)} of {filteredReports.length} reports
+                </p>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <FiChevronLeft size={16} />
+                    </button>
+                    <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-blue-600 px-2 text-sm font-semibold text-white">
+                        {currentPage}
+                    </span>
+                    <span className="text-sm text-slate-400">of {totalPages}</span>
+                    <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <FiChevronRight size={16} />
+                    </button>
+                </div>
             </div>
 
         </div>

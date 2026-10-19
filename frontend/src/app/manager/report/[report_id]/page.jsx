@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import DashboardLayout from "../../../../components/DashboardLayout";
 import CallIllustration from "../../../../components/CallIllustration";
-import AutoQaPanel from "../../../../components/AutoQaPanel";
 import PiiBanner from "../../../../components/PiiBanner";
 import api from "../../../../services/api";
 import { getErrorMessage } from "../../../../lib/apiError.mjs";
@@ -860,8 +859,6 @@ export default function ManagerReportDetails() {
                 </div>
 
             </div>
-
-            <AutoQaPanel reportId={report.id} canOverride />
 
             {/* Manager Review & Feedback — kept fully editable, just re-skinned to match */}
 

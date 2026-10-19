@@ -52,6 +52,8 @@ def get_my_reports(
                 "customer_score": report.customer_score,
                 "agent_score": report.agent_score,
                 "processing_status": report.processing_status.value,
+                "call_duration": report.call_duration,
+                "file_size": report.file_size,
                 "created_at": report.created_at
             }
             for report in reports

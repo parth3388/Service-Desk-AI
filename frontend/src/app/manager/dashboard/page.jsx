@@ -1,7 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Cell,
+    LabelList,
+    PieChart,
+    Pie,
+    ResponsiveContainer
+} from "recharts";
 import { deleteCompanyReport } from "../../../services/managerService";
 import DashboardLayout from "../../../components/DashboardLayout";
 import StatCard from "../../../components/StatCard";
@@ -13,16 +26,89 @@ import {
     FiAward,
     FiSmile,
     FiUserCheck,
-    FiStar,
     FiCpu,
     FiFileText,
-    FiAlertTriangle,
     FiUploadCloud
 } from "react-icons/fi";
+import { MdEmojiEvents } from "react-icons/md";
 
 import {
     getManagerDashboard
 } from "../../../services/managerService";
+
+// Re-visualizes the same three averages already shown in the stat cards
+// above (Confidence / Customer / Agent) as a bar chart, plus their mean as
+// a composite ring — no new or fabricated numbers, just another view of
+// the same real statistics.
+function ScoreOverview({ statistics }) {
+    const scores = [
+        { name: "Confidence", value: statistics.average_confidence_score || 0, color: "#3b82f6" },
+        { name: "Customer", value: statistics.average_customer_score || 0, color: "#f97316" },
+        { name: "Agent", value: statistics.average_agent_score || 0, color: "#ec4899" }
+    ];
+
+    const compositeExact =
+        scores.reduce((sum, s) => sum + s.value, 0) / scores.length;
+    const composite = compositeExact.toFixed(2);
+
+    const ringData = [
+        { name: "score", value: compositeExact },
+        { name: "rest", value: Math.max(0, 100 - compositeExact) }
+    ];
+
+    return (
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Score Overview</h2>
+            <p className="text-sm text-slate-500">Average scores across all calls</p>
+
+            <div className="mt-4 flex items-center gap-4">
+                <div className="h-40 flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={scores} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                            <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                            <Tooltip />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                {scores.map((s) => (
+                                    <Cell key={s.name} fill={s.color} />
+                                ))}
+                                <LabelList
+                                    dataKey="value"
+                                    position="top"
+                                    formatter={(v) => Number(v).toFixed(2)}
+                                    style={{ fontSize: 12, fontWeight: 700, fill: "#334155" }}
+                                />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="relative h-28 w-28 shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={ringData}
+                                dataKey="value"
+                                innerRadius={34}
+                                outerRadius={48}
+                                startAngle={90}
+                                endAngle={-270}
+                            >
+                                <Cell fill="#8b5cf6" />
+                                <Cell fill="#f1f5f9" />
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-base font-bold text-slate-900">{composite}</span>
+                        <span className="text-[9px] text-slate-400">Overall</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function ManagerDashboardPage() {
 
@@ -32,13 +118,7 @@ export default function ManagerDashboardPage() {
 
     const [error, setError] = useState("");
 
-    useEffect(() => {
-
-        loadDashboard();
-
-    }, []);
-
-    const loadDashboard = async () => {
+    const loadDashboard = useCallback(async () => {
 
         try {
 
@@ -68,7 +148,17 @@ export default function ManagerDashboardPage() {
 
         }
 
-    };
+    }, []);
+
+    useEffect(() => {
+
+        async function run() {
+            await loadDashboard();
+        }
+
+        run();
+
+    }, [loadDashboard]);
 
     if (loading) {
 
@@ -123,9 +213,12 @@ export default function ManagerDashboardPage() {
 
                 gradient icon + "Hi, [name]" heading instead of the blue banner. */}
 
-            <div className="-mx-8 -mt-8 px-8 py-14">
+            <div className="relative -mx-8 -mt-8 overflow-hidden px-8 py-14">
 
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-cyan-500 text-white shadow-lg">
+                <div className="absolute -top-16 -left-10 h-64 w-64 rounded-full bg-blue-200/30 blur-3xl" />
+                <div className="absolute top-0 right-0 h-72 w-72 rounded-full bg-violet-200/30 blur-3xl" />
+
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-cyan-500 text-white shadow-lg">
 
                     <FiCpu size={22} />
 
@@ -165,7 +258,7 @@ export default function ManagerDashboardPage() {
 
                         href="/manager/reports"
 
-                        className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-blue-700"
+                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:opacity-90"
 
                     >
 
@@ -179,7 +272,7 @@ export default function ManagerDashboardPage() {
 
                         href="/manager/employees"
 
-                        className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+                        className="flex items-center gap-2 rounded-xl border-2 border-violet-200 bg-white px-6 py-3 font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50"
 
                     >
 
@@ -189,8 +282,8 @@ export default function ManagerDashboardPage() {
 
                     </Link>
                     <Link
-                        href="/manager/generate-report" 
-                        className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-emerald-700"
+                        href="/manager/generate-report"
+                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90"
                     >
                         <FiUploadCloud size={18} />
                         Generate Report
@@ -262,79 +355,85 @@ export default function ManagerDashboardPage() {
 
                 </div>
 
-                {
+                <div className="mt-8 grid gap-6 lg:grid-cols-2">
 
-                    dashboard.top_performer && (
+                    {
+                        dashboard.top_performer && (
 
-                        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="relative overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 shadow-sm">
 
-                            <div className="flex items-center gap-3">
+                                <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-amber-200/40 blur-2xl" />
 
-                                <FiStar className="text-3xl text-yellow-500" />
+                                <div className="relative flex items-center gap-3">
 
-                                <div>
+                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg">
+                                        <MdEmojiEvents className="text-xl" />
+                                    </span>
 
-                                    <h2 className="text-2xl font-bold text-slate-900">
+                                    <div>
 
-                                        Top Performer
+                                        <h2 className="text-xl font-bold text-slate-900">
 
-                                    </h2>
+                                            Top Performer
 
-                                    <p className="text-slate-500">
+                                        </h2>
 
-                                        Highest Confidence Score
+                                        <p className="text-sm text-slate-500">
 
-                                    </p>
+                                            Highest Confidence Score
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                                <div className="relative mt-6 flex items-center justify-between rounded-xl bg-white/70 p-4">
+
+                                    <div>
+
+                                        <p className="text-lg font-bold text-slate-800">
+
+                                            {
+
+                                                dashboard.top_performer.employee_name
+
+                                            }
+
+                                        </p>
+
+                                        <p className="text-sm text-slate-500">
+
+                                            Employee ID: {
+
+                                                dashboard.top_performer.employee_id
+
+                                            }
+
+                                        </p>
+
+                                    </div>
+
+                                    <div className="rounded-xl bg-green-100 px-5 py-2.5 text-xl font-bold text-green-700">
+
+                                        {
+
+                                            dashboard.top_performer.average_confidence_score
+
+                                        }
+
+                                    </div>
 
                                 </div>
 
                             </div>
 
-                            <div className="mt-6 flex items-center justify-between">
+                        )
+                    }
 
-                                <div>
+                    <ScoreOverview statistics={dashboard.statistics} />
 
-                                    <p className="text-lg font-semibold text-slate-800">
-
-                                        {
-
-                                            dashboard.top_performer.employee_name
-
-                                        }
-
-                                    </p>
-
-                                    <p className="text-slate-500">
-
-                                        Employee ID :
-
-                                        {
-
-                                            dashboard.top_performer.employee_id
-
-                                        }
-
-                                    </p>
-
-                                </div>
-
-                                <div className="rounded-xl bg-green-100 px-6 py-3 text-2xl font-bold text-green-700">
-
-                                    {
-
-                                        dashboard.top_performer.average_confidence_score
-
-                                    }
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    )
-
-                }
+                </div>
 
                 <div className="mt-8">
 

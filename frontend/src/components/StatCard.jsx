@@ -19,28 +19,38 @@ export default function StatCard({
     const colors = {
 
         blue: {
-            background: "bg-blue-100",
-            text: "text-blue-700"
+            card: "from-blue-50 via-white to-blue-100/60 border-blue-100",
+            badge: "bg-gradient-to-br from-blue-500 to-blue-600",
+            text: "text-blue-700",
+            blob: "bg-blue-300/40"
         },
 
         green: {
-            background: "bg-green-100",
-            text: "text-green-700"
+            card: "from-emerald-50 via-white to-emerald-100/60 border-emerald-100",
+            badge: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+            text: "text-emerald-700",
+            blob: "bg-emerald-300/40"
         },
 
         orange: {
-            background: "bg-orange-100",
-            text: "text-orange-700"
+            card: "from-orange-50 via-white to-orange-100/60 border-orange-100",
+            badge: "bg-gradient-to-br from-orange-400 to-orange-500",
+            text: "text-orange-700",
+            blob: "bg-orange-300/40"
         },
 
         red: {
-            background: "bg-red-100",
-            text: "text-red-700"
+            card: "from-pink-50 via-white to-pink-100/60 border-pink-100",
+            badge: "bg-gradient-to-br from-pink-500 to-rose-500",
+            text: "text-pink-700",
+            blob: "bg-pink-300/40"
         },
 
         purple: {
-            background: "bg-purple-100",
-            text: "text-purple-700"
+            card: "from-violet-50 via-white to-violet-100/60 border-violet-100",
+            badge: "bg-gradient-to-br from-violet-500 to-purple-600",
+            text: "text-violet-700",
+            blob: "bg-violet-300/40"
         }
 
     };
@@ -51,43 +61,33 @@ export default function StatCard({
 
     return (
 
-        <div className="rounded-2xl bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${selectedColor.card}`}>
 
-            <div className="flex items-start justify-between gap-2">
+            <div className={`absolute -top-6 -right-6 h-24 w-24 rounded-full blur-2xl ${selectedColor.blob}`} />
 
-                <div className="min-w-0 flex-1">
+            <div className="relative min-w-0">
 
-                    <p className="whitespace-nowrap text-sm font-medium text-slate-500">
+                <p className="flex items-start gap-1.5 text-sm font-semibold text-slate-600">
 
-                        {title}
+                    <span className={`mt-0.5 shrink-0 ${selectedColor.text}`}>
+                        <span className="text-xs">
+                            {icon}
+                        </span>
+                    </span>
 
-                    </p>
+                    <span>{title}</span>
 
-                    <h2 className="mt-3 text-3xl font-bold text-slate-800">
+                </p>
 
-                        {value}
+                <h2 className="mt-3 text-3xl font-extrabold text-slate-900">
 
-                    </h2>
+                    {value}
 
-                </div>
-
-                <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${selectedColor.background}`}
-                >
-
-                    <div
-                        className={`text-xl ${selectedColor.text}`}
-                    >
-
-                        {icon}
-
-                    </div>
-
-                </div>
+                </h2>
 
             </div>
 
-            <div className="mt-6 flex items-center text-sm text-slate-400">
+            <div className={`relative mt-6 flex items-center text-sm font-medium ${selectedColor.text}`}>
 
                 <FiArrowUpRight
                     className="mr-2"

@@ -1,7 +1,14 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
-import { FiTrash2, FiArrowRight } from "react-icons/fi";
+import { FiTrash2, FiArrowRight, FiSearch } from "react-icons/fi";
 import { deleteReport as deleteEmployeeReport } from "../services/employeeService";
+
+const RANGE_OPTIONS = [
+    { value: "all", label: "All Time", days: null },
+    { value: "7", label: "Last 7 Days", days: 7 },
+    { value: "30", label: "Last 30 Days", days: 30 }
+];
 
 export default function RecentCallsTable({
 
@@ -16,6 +23,9 @@ export default function RecentCallsTable({
     viewAllHref
 
 }) {
+
+    const [search, setSearch] = useState("");
+    const [range, setRange] = useState("all");
 
     const getStatusStyle = (status) => {
 
@@ -86,11 +96,26 @@ export default function RecentCallsTable({
 
     };
 
+    const selectedRange = RANGE_OPTIONS.find((r) => r.value === range) || RANGE_OPTIONS[0];
+    const nowMs = new Date().getTime();
+
+    const filteredCalls = calls
+        .filter((call) =>
+            call.original_filename
+                ?.toLowerCase()
+                .includes(search.toLowerCase())
+        )
+        .filter((call) => {
+            if (!selectedRange.days) return true;
+            const cutoff = nowMs - selectedRange.days * 24 * 60 * 60 * 1000;
+            return new Date(call.created_at).getTime() >= cutoff;
+        });
+
     return (
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-md">
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
 
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+            <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
 
                 <div>
 
@@ -108,27 +133,52 @@ export default function RecentCallsTable({
 
                 </div>
 
-                {
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 
-                    viewAllHref && (
+                    <div className="relative">
+                        <FiSearch className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search by file name..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 py-2.5 pr-4 pl-9 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-60"
+                        />
+                    </div>
 
-                        <Link
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value)}
+                        className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 outline-none transition focus:border-blue-500"
+                    >
+                        {RANGE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
 
-                            href={viewAllHref}
+                    {
+                        viewAllHref && (
 
-                            className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                            <Link
 
-                        >
+                                href={viewAllHref}
 
-                            View All
+                                className="flex shrink-0 items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
 
-                            <FiArrowRight size={16} />
+                            >
 
-                        </Link>
+                                View All
 
-                    )
+                                <FiArrowRight size={16} />
 
-                }
+                            </Link>
+
+                        )
+                    }
+
+                </div>
 
             </div>
 
@@ -140,7 +190,11 @@ export default function RecentCallsTable({
 
                         <tr>
 
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
+                                #
+                            </th>
+
+                            <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Audio File
 
@@ -150,7 +204,7 @@ export default function RecentCallsTable({
 
                                 showEmployee && (
 
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">
+                                    <th className="px-4 py-4 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                         Employee
 
@@ -160,37 +214,37 @@ export default function RecentCallsTable({
 
                             }
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Confidence
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Customer
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Agent
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Status
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Uploaded
 
                             </th>
 
-                            <th className="px-6 py-4 text-center text-sm font-semibold text-slate-600">
+                            <th className="px-4 py-4 text-center text-xs font-bold tracking-wide text-slate-500 uppercase">
 
                                 Action
 
@@ -204,7 +258,7 @@ export default function RecentCallsTable({
 
                         {
 
-                            calls.length === 0 && (
+                            filteredCalls.length === 0 && (
 
                                 <tr>
 
@@ -212,7 +266,7 @@ export default function RecentCallsTable({
 
                                         colSpan={
 
-                                            showEmployee ? 8 : 7
+                                            showEmployee ? 9 : 8
 
                                         }
 
@@ -220,7 +274,7 @@ export default function RecentCallsTable({
 
                                     >
 
-                                        No reports available.
+                                        No reports found.
 
                                     </td>
 
@@ -232,17 +286,21 @@ export default function RecentCallsTable({
 
                         {
 
-                            calls.map((call) => (
+                            filteredCalls.map((call, index) => (
 
                                 <tr
 
                                     key={call.id}
 
-                                    className="border-t border-slate-100 hover:bg-slate-50"
+                                    className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60 hover:bg-blue-50/40"
 
                                 >
 
-                                    <td className="px-6 py-5">
+                                    <td className="px-4 py-5 text-sm font-semibold text-slate-400">
+                                        {index + 1}
+                                    </td>
+
+                                    <td className="px-4 py-5">
 
                                         <p className="font-medium text-slate-800">
 
@@ -256,7 +314,7 @@ export default function RecentCallsTable({
 
                                         showEmployee && (
 
-                                            <td className="px-6 py-5">
+                                            <td className="px-4 py-5">
 
                                                 {call.employee_name}
 
@@ -266,29 +324,29 @@ export default function RecentCallsTable({
 
                                     }
 
-                                    <td className="px-6 py-5 text-center font-semibold">
+                                    <td className="px-4 py-5 text-center font-semibold">
 
                                         {call.confidence_score}
 
                                     </td>
 
-                                    <td className="px-6 py-5 text-center">
+                                    <td className="px-4 py-5 text-center">
 
                                         {call.customer_score}
 
                                     </td>
 
-                                    <td className="px-6 py-5 text-center">
+                                    <td className="px-4 py-5 text-center">
 
                                         {call.agent_score}
 
                                     </td>
 
-                                    <td className="px-6 py-5 text-center">
+                                    <td className="px-4 py-5 text-center">
 
                                         <span
 
-                                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(call.processing_status)}`}
+                                            className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusStyle(call.processing_status)}`}
 
                                         >
 
@@ -298,7 +356,7 @@ export default function RecentCallsTable({
 
                                     </td>
 
-                                    <td className="px-6 py-5 text-center text-sm text-slate-500">
+                                    <td className="px-4 py-5 text-center text-sm text-slate-500">
 
                                         {
 
@@ -312,7 +370,7 @@ export default function RecentCallsTable({
 
                                     </td>
 
-                                    <td className="px-6 py-5">
+                                    <td className="px-4 py-5">
 
                                         <div className="flex items-center justify-center">
 
@@ -321,7 +379,7 @@ export default function RecentCallsTable({
                                                 className="rounded-lg bg-red-600 p-2 text-white transition hover:bg-red-700"
                                                 title="Delete Report"
                                             >
-                                                <FiTrash2 />
+                                                <FiTrash2 size={15} />
                                             </button>
 
                                         </div>

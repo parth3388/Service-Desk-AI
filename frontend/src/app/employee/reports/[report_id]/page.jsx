@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import DashboardLayout from "../../../../components/DashboardLayout";
 import CallIllustration from "../../../../components/CallIllustration";
-import AutoQaPanel from "../../../../components/AutoQaPanel";
 import PiiBanner from "../../../../components/PiiBanner";
 import api from "../../../../services/api";
 import { getReportAudio } from "../../../../services/employeeService";
@@ -1101,8 +1100,6 @@ export default function EmployeeReportDetails() {
                 )}
 
             </div>
-
-            <AutoQaPanel reportId={report.id} canOverride={false} />
 
             <div className="mt-8 rounded-2xl bg-white p-8 shadow transition-all duration-300 hover:shadow-lg">
 

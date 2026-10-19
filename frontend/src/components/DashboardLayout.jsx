@@ -39,7 +39,7 @@ export default function DashboardLayout({
 
             {/* Main Content */}
 
-            <div className="min-h-screen">
+            <div className="min-h-screen lg:pl-64">
 
                 {/* Fixed Navbar */}
 
@@ -55,7 +55,7 @@ export default function DashboardLayout({
 
                 {/* Page Content */}
 
-                <main className="pt-28 px-8 pb-8 min-h-screen overflow-x-auto">
+                <main className="min-h-screen overflow-x-auto px-5 pt-24 pb-8 lg:px-8 lg:pt-28">
 
                     {children}
 
