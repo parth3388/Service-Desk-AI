@@ -78,18 +78,16 @@ def test_forgot_password_is_limited(client, limited):
     assert codes == [200, 200, 429]
 
 
-def test_register_is_limited(client, limited, monkeypatch):
-    import app.api.auth as auth_module
-
-    monkeypatch.setattr(auth_module, "send_verification_email", lambda **kw: None)
-
+def test_register_is_limited(client, limited):
+    # Registration itself is disabled (403), but the rate limiter still
+    # runs ahead of the handler, so repeated attempts still get capped.
     def register(n):
         return client.post(
             "/auth/register",
             json={"full_name": "Some One", "email": f"u{n}@example.com", "password": "Password123", "role": "employee"},
         ).status_code
 
-    assert [register(1), register(2), register(3)] == [200, 200, 429]
+    assert [register(1), register(2), register(3)] == [403, 403, 429]
 
 
 def test_contact_form_is_limited(client, limited, monkeypatch):

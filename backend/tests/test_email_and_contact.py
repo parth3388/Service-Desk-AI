@@ -73,40 +73,6 @@ def test_every_email_type_goes_through_the_timeout_sender(monkeypatch):
 
 
 # ----------------------------------------------------------------------
-# Failures are visible, not swallowed
-# ----------------------------------------------------------------------
-
-def register_body(email="new@example.com"):
-    return {"full_name": "New Person", "email": email, "password": "Password123", "role": "employee"}
-
-
-def test_register_reports_when_the_verification_email_could_not_be_sent(client, db, monkeypatch):
-    def boom(**kwargs):
-        raise socket.timeout("smtp timed out")
-
-    monkeypatch.setattr(auth_module, "send_verification_email", boom)
-
-    response = client.post("/auth/register", json=register_body())
-
-    assert response.status_code == 200                     # the account exists
-    body = response.json()
-    assert body["verification_email_sent"] is False
-    assert "could not be sent" in body["message"]
-    assert "Resend verification email" in body["message"]
-    assert "timed out" not in response.text
-    assert db.query(User).count() == 1
-
-
-def test_register_reports_success_when_email_is_sent(client, monkeypatch):
-    monkeypatch.setattr(auth_module, "send_verification_email", lambda **kw: None)
-
-    body = client.post("/auth/register", json=register_body()).json()
-
-    assert body["verification_email_sent"] is True
-    assert "check your email" in body["message"]
-
-
-# ----------------------------------------------------------------------
 # Resend verification
 # ----------------------------------------------------------------------
 

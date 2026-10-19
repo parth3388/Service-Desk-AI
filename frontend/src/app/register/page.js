@@ -1,26 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiEye, FiEyeOff } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc";
 import {
     MdMic,
     MdBarChart,
     MdPictureAsPdf,
-    MdPersonOutline,
-    MdWorkOutline,
-    MdMailOutline,
     MdLockOutline,
     MdGppGood,
     MdPlayArrow,
 } from "react-icons/md";
 
 import Logo from "../../components/Logo";
-import { registerUser } from "../../services/authService";
-import { getErrorMessage } from "../../lib/apiError.mjs";
-import { validatePassword } from "../../lib/validation.mjs";
 
 // Fixed bar heights for the illustrative waveform — purely decorative.
 const WAVEFORM_BARS = [6, 11, 8, 15, 10, 18, 13, 7, 14, 9];
@@ -102,56 +92,6 @@ function AuthIllustration() {
 }
 
 export default function RegisterPage() {
-    const router = useRouter();
-
-    const [fullName, setFullName] = useState("");
-    const [role, setRole] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-
-    const handleRegister = async (event) => {
-        event.preventDefault();
-        setError("");
-        setSuccess("");
-
-        // Same policy the server enforces (min 8 characters, max 72 bytes).
-        const passwordProblem = validatePassword(password);
-
-        if (passwordProblem) {
-            setError(passwordProblem);
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const result = await registerUser({
-                full_name: fullName,
-                email,
-                password,
-                role
-            });
-
-            // The server says whether the verification email actually went out.
-            const baseMessage =
-                result?.message ||
-                "Registration successful. Please check your email to verify your account.";
-
-            setSuccess(`${baseMessage} Redirecting to Login...`);
-
-            setTimeout(() => {
-                router.push("/login");
-            }, 4000);
-        } catch (error) {
-            setError(getErrorMessage(error, "Unable to register. Please try again."));
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-10 sm:px-6 lg:px-10">
@@ -220,147 +160,26 @@ export default function RegisterPage() {
                                 <Logo height={56} />
                             </div>
 
-                            <div className="mb-6 text-center">
-                                <h2 className="text-2xl font-bold text-slate-900">
-                                    Create Your Account
+                            <div className="mb-2 text-center">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+                                    <MdLockOutline className="text-2xl text-amber-600" />
+                                </div>
+                                <h2 className="mt-4 text-2xl font-bold text-slate-900">
+                                    Account Creation Disabled
                                 </h2>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Join ShatarupaX AI Labs and get started with
-                                    AI Service Desk.
+                                <p className="mt-3 text-sm leading-relaxed text-slate-500">
+                                    Self sign-up isn&apos;t available. Please sign
+                                    in using the email and password provided by
+                                    your company.
                                 </p>
                             </div>
 
-                            {error && (
-                                <div className="mb-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-                                    {error}
-                                </div>
-                            )}
-
-                            {success && (
-                                <div className="mb-5 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-700">
-                                    {success}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleRegister} className="space-y-4">
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Full Name <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <MdPersonOutline className="absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-slate-400" />
-                                        <input
-                                            type="text"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                            placeholder="John Doe"
-                                            className="w-full rounded-xl border border-slate-300 py-2.5 pr-4 pl-10 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Role <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <MdWorkOutline className="absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-slate-400" />
-                                        <select
-                                            value={role}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            required
-                                            className="w-full appearance-none rounded-xl border border-slate-300 py-2.5 pr-4 pl-10 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                                        >
-                                            <option value="" disabled>
-                                                Select Role
-                                            </option>
-                                            <option value="employee">Employee</option>
-                                            <option value="manager">Manager</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Email Address <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <MdMailOutline className="absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-slate-400" />
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="john@example.com"
-                                            className="w-full rounded-xl border border-slate-300 py-2.5 pr-4 pl-10 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Password <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <MdLockOutline className="absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-slate-400" />
-                                        <input
-                                            type={showPassword ? "text" : "password"}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="At least 8 characters"
-                                            className="w-full rounded-xl border border-slate-300 py-2.5 pr-11 pl-10 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword((prev) => !prev)}
-                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600"
-                                            tabIndex={-1}
-                                            aria-label={showPassword ? "Hide password" : "Show password"}
-                                        >
-                                            {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="mt-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 py-3 font-semibold text-white shadow-md shadow-blue-600/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {loading ? "Creating Account..." : "Create Account →"}
-                                </button>
-                            </form>
-
-                            <div className="my-6 flex items-center gap-3">
-                                <div className="h-px flex-1 bg-slate-200" />
-                                <span className="text-xs font-medium text-slate-400">or</span>
-                                <div className="h-px flex-1 bg-slate-200" />
-                            </div>
-
-                            <button
-                                type="button"
-                                disabled
-                                title="Google sign-in is not available yet"
-                                aria-disabled="true"
-                                className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-3 text-sm font-semibold text-slate-400"
+                            <Link
+                                href="/login"
+                                className="mt-6 flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition hover:opacity-90"
                             >
-                                <FcGoogle className="text-lg opacity-60" />
-                                Continue with Google
-                            </button>
-
-                            <div className="mt-6 text-center text-sm">
-                                <p className="text-slate-600">
-                                    Already have an account?{" "}
-                                    <Link
-                                        href="/login"
-                                        className="font-semibold text-blue-600 hover:underline"
-                                    >
-                                        Login
-                                    </Link>
-                                </p>
-                            </div>
+                                Go to Login →
+                            </Link>
                         </div>
                     </div>
                 </div>

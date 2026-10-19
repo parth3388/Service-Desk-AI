@@ -67,8 +67,11 @@ def test_register_rejects_invalid_passwords_with_422(register, password):
     assert response.status_code == 422
 
 
-def test_register_accepts_valid_password(register):
-    assert register("Str0ngEnough").status_code == 200
+def test_register_with_a_valid_password_still_hits_the_disabled_endpoint(register):
+    # Password validation (422 for bad ones) runs before the handler body,
+    # so a valid password should clear that check and reach the "account
+    # creation is disabled" rejection, not a validation error.
+    assert register("Str0ngEnough").status_code == 403
 
 
 @bad_passwords

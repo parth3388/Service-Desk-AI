@@ -62,74 +62,12 @@ def register_user(
     db: Session = Depends(get_db)
 ):
 
-    email = user.email.lower()
-
-    existing_user = (
-        db.query(User)
-        .filter(User.email == email)
-        .first()
+    # Self-service sign-up is disabled — accounts are provisioned by the
+    # company and shared directly with employees/managers.
+    raise HTTPException(
+        status_code=403,
+        detail="Account creation is disabled. Please sign in using the email and password provided by your company."
     )
-
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered."
-        )
-
-    new_user = User(
-        full_name=user.full_name,
-        email=email,
-        hashed_password=hash_password(user.password),
-        role=user.role
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    verification_token = create_email_verification_token(
-        user_id=new_user.id,
-        email=new_user.email
-    )
-
-    email_sent = True
-
-    try:
-        send_verification_email(
-            to_email=new_user.email,
-            token=verification_token
-        )
-    except Exception:
-        logger.exception(
-            "Verification email failed for user %s", new_user.id
-        )
-        email_sent = False
-
-    if email_sent:
-        message = (
-            "Account created successfully. "
-            "Please check your email to verify your account."
-        )
-    else:
-        message = (
-            "Account created, but the verification email could not be sent. "
-            "Use \"Resend verification email\" on the login page to get a new link."
-        )
-
-    return {
-        "status": "success",
-        "message": message,
-        "verification_email_sent": email_sent,
-        "user": {
-            "id": new_user.id,
-            "full_name": new_user.full_name,
-            "email": new_user.email,
-            "role": new_user.role.value,
-            "is_active": new_user.is_active,
-            "is_verified": new_user.is_verified,
-            "created_at": new_user.created_at
-        }
-    }
 
 
 @router.get("/verify-email", response_class=HTMLResponse)
